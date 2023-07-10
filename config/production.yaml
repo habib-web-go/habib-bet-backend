@@ -1,0 +1,3 @@
+server:
+  addr: :80
+  mode: release
