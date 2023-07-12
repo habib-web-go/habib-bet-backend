@@ -12,3 +12,4 @@ db:
 session:
   name: habib-bet
   secret: habib-secret
+  userKer: user

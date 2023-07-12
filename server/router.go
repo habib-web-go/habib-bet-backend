@@ -10,9 +10,14 @@ import (
 
 func NewRouter() *gin.Engine {
 	conf := config.GetConfig()
-
 	gin.SetMode(conf.GetString("server.mode"))
 	router := gin.New()
+	initV1Router(router.Group("v1"))
+	return router
+}
+
+func initV1Router(router *gin.RouterGroup) {
+	conf := config.GetConfig()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(
@@ -21,8 +26,6 @@ func NewRouter() *gin.Engine {
 			cookie.NewStore([]byte(conf.GetString("session.secret"))),
 		),
 	)
-	rootRouter := router.Group("/")
-	controllers.InitHealthController(rootRouter)
+	controllers.InitHealthController(router)
 	controllers.InitUserController(router.Group("user"))
-	return router
 }

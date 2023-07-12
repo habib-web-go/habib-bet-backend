@@ -8,9 +8,9 @@ import (
 
 type User struct {
 	gorm.Model
-	Username       string `gorm:"unique,index"`
+	Username       string `gorm:"unique;index"`
 	HashedPassword string `gorm:"notNull"`
-	coins          int    `gorm:"default:0,check: coins > 0"`
+	Coins          uint   `gorm:"default:0"`
 }
 
 func CreateUser(username, password *string) (*User, error) {
@@ -43,6 +43,18 @@ func GetUserByUsername(username *string) (*User, error) {
 	if user.ID == 0 {
 		return nil, nil
 	}
+	return &user, nil
+}
 
+func GetUserById(id uint) (*User, error) {
+	db := _db.GetDB()
+	user := User{}
+	result := db.Find(&user, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if user.ID == 0 {
+		return nil, nil
+	}
 	return &user, nil
 }

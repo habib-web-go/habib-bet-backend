@@ -3,17 +3,19 @@ package controllers
 import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/habib-web-go/habib-bet-backend/config"
 	"github.com/habib-web-go/habib-bet-backend/db"
 	"github.com/habib-web-go/habib-bet-backend/forms"
+	"github.com/habib-web-go/habib-bet-backend/middlewares"
 	"github.com/habib-web-go/habib-bet-backend/models"
 	"net/http"
 )
 
-const userKey = "user"
+type UserController struct {
+	userKey string
+}
 
-type UserController struct{}
-
-func (u UserController) signup(c *gin.Context) {
+func (u *UserController) signup(c *gin.Context) {
 	var requestBody forms.User
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
@@ -26,10 +28,10 @@ func (u UserController) signup(c *gin.Context) {
 		}
 		panic(err)
 	}
-	addUserToSession(c, user)
+	u.addUserToSession(c, user)
 }
 
-func (u UserController) login(c *gin.Context) {
+func (u *UserController) login(c *gin.Context) {
 	var requestBody forms.User
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
@@ -47,22 +49,42 @@ func (u UserController) login(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "wrong password"})
 		return
 	}
-	addUserToSession(c, user)
+	u.addUserToSession(c, user)
 }
 
-func addUserToSession(c *gin.Context, u *models.User) {
+func (u *UserController) logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	session.Set(userKey, u.ID)
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"id": u.ID, "username": u.Username})
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func (u *UserController) addUserToSession(c *gin.Context, user *models.User) {
+	session := sessions.Default(c)
+	session.Clear()
+	session.Set(u.userKey, user.ID)
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"id": user.ID, "username": user.Username})
+}
+
+func (u *UserController) me(c *gin.Context) {
+	user := middlewares.GetUser(c)
+	c.JSON(http.StatusOK, gin.H{"id": user.ID, "username": user.Username})
 }
 
 func InitUserController(router *gin.RouterGroup) {
-	u := UserController{}
+	conf := config.GetConfig()
+	u := UserController{userKey: conf.GetString("session.userKey")}
 	router.POST("signup", u.signup)
 	router.POST("login", u.login)
+	router.POST("logout", u.logout)
+	withAuthRouter := router.Group("")
+	withAuthRouter.Use(middlewares.AuthMiddleware)
+	withAuthRouter.GET("me", u.me)
 }
