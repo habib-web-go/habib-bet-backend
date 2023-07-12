@@ -1,3 +1,5 @@
 server:
   addr: :80
   mode: release
+
+# TODO complete production configuration

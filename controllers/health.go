@@ -7,6 +7,11 @@ import (
 
 type HealthController struct{}
 
-func (h HealthController) Status(c *gin.Context) {
-	c.String(http.StatusOK, "Working!")
+func (h HealthController) status(c *gin.Context) {
+	c.JSONP(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func InitHealthController(router *gin.RouterGroup) {
+	h := HealthController{}
+	router.GET("health", h.status)
 }

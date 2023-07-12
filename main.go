@@ -2,22 +2,21 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
-
 	"github.com/habib-web-go/habib-bet-backend/config"
 	"github.com/habib-web-go/habib-bet-backend/db"
+	"github.com/habib-web-go/habib-bet-backend/models"
 	"github.com/habib-web-go/habib-bet-backend/server"
 )
 
 func main() {
-	environment := flag.String("e", "development", "")
-	flag.Usage = func() {
-		fmt.Println("Usage: server -e {mode}")
-		os.Exit(1)
-	}
+	profile := flag.String("profile", "development", "config profile")
+	command := flag.String(
+		"command",
+		"run_server",
+		"command to execute. possible values: run_server,migration",
+	)
 	flag.Parse()
-	err := config.Init(*environment)
+	err := config.Init(*profile)
 	if err != nil {
 		panic(err)
 	}
@@ -25,8 +24,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = server.Init()
-	if err != nil {
-		panic(err)
+	if *command == "run_server" {
+		err = server.Init()
+		if err != nil {
+			panic(err)
+		}
+	}
+	if *command == "migrate" {
+		err = models.AutoMigrate()
+		if err != nil {
+			panic(err)
+		}
 	}
 }

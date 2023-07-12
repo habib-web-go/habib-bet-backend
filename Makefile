@@ -1,5 +1,6 @@
 NAME=habib-bet-backend
 VERSION=0.0.1
+DOCKER_DEVELOPMENT=docker compose --file docker/docker-compose-development.yml --project-name habib-bet
 
 .PHONY: build
 ## build: Compile the packages.
@@ -9,22 +10,24 @@ build:
 .PHONY: run
 ## run: Build and Run in development mode.
 run: build
-	@./$(NAME) -e development
+	@./$(NAME) --profile development
 
 .PHONY: run-prod
 ## run-prod: Build and Run in production mode.
 run-prod: build
-	@./$(NAME) -e production
+	@./$(NAME) --profile production
 
 .PHONY: clean
 ## clean: Clean project and previous builds.
 clean:
 	@rm -f $(NAME)
+	@@$(DOCKER_DEVELOPMENT) down -v
 
 .PHONY: deps
 ## deps: Download modules
 deps:
 	@go mod download
+	@$(DOCKER_DEVELOPMENT) up -d
 
 .PHONY: help
 all: help
