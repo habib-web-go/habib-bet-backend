@@ -16,7 +16,7 @@ type UserController struct {
 }
 
 func (u *UserController) signup(c *gin.Context) {
-	var requestBody forms.User
+	var requestBody forms.UserRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
 		return
@@ -33,7 +33,7 @@ func (u *UserController) signup(c *gin.Context) {
 }
 
 func (u *UserController) login(c *gin.Context) {
-	var requestBody forms.User
+	var requestBody forms.UserRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
 		return
@@ -43,11 +43,11 @@ func (u *UserController) login(c *gin.Context) {
 		panic(err)
 	}
 	if user == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		handleError(c, nil, "User not found.", http.StatusNotFound)
 		return
 	}
 	if !user.CheckPasswordHash(&requestBody.Password) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "wrong password"})
+		handleError(c, nil, "wrong password", http.StatusForbidden)
 		return
 	}
 	u.addUserToSession(c, user)
@@ -57,8 +57,7 @@ func (u *UserController) logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
 	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
-		return
+		panic(err)
 	}
 	c.JSON(http.StatusOK, gin.H{})
 }
@@ -68,15 +67,28 @@ func (u *UserController) addUserToSession(c *gin.Context, user *models.User) {
 	session.Clear()
 	session.Set(u.userKey, user.ID)
 	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
-		return
+		panic(err)
 	}
-	c.JSON(http.StatusOK, gin.H{"id": user.ID, "username": user.Username})
+	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
 }
 
 func (u *UserController) me(c *gin.Context) {
 	user := middlewares.GetUser(c)
-	c.JSON(http.StatusOK, gin.H{"id": user.ID, "username": user.Username})
+	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
+}
+
+func (u *UserController) increaseCoin(c *gin.Context) {
+	var requestBody forms.IncreaseCoinsRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		handleBadRequest(c, err)
+		return
+	}
+	user := middlewares.GetUser(c)
+	err := user.IncreaseCoins(requestBody.Amount)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
 }
 
 func InitUserController(router *gin.RouterGroup) {
@@ -88,4 +100,5 @@ func InitUserController(router *gin.RouterGroup) {
 	withAuthRouter := router.Group("")
 	withAuthRouter.Use(middlewares.AuthMiddleware)
 	withAuthRouter.GET("me", u.me)
+	withAuthRouter.POST("increase-coins", u.increaseCoin)
 }

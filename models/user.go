@@ -33,6 +33,15 @@ func (u *User) CheckPasswordHash(password *string) bool {
 	return err == nil
 }
 
+func (u *User) IncreaseCoins(amount uint) error {
+	db := _db.GetDB()
+	result := db.Model(u).Update("coins", gorm.Expr("coins + ?", amount))
+	if result.Error == nil {
+		u.Coins += amount
+	}
+	return result.Error
+}
+
 func GetUserByUsername(username *string) (*User, error) {
 	db := _db.GetDB()
 	user := User{Username: *username}
