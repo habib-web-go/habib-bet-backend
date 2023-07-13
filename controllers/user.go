@@ -25,6 +25,7 @@ func (u *UserController) signup(c *gin.Context) {
 	if err != nil {
 		if db.IsDuplicateKeyError(err) {
 			handleBadRequestWithMessage(c, err, "username already taken")
+			return
 		}
 		panic(err)
 	}

@@ -23,9 +23,9 @@ func CreateUser(username, password *string) (*User, error) {
 	user.HashedPassword = string(bytes)
 	result := db.Create(&user)
 	if result.Error != nil {
-		return nil, err
+		return nil, result.Error
 	}
-	return &user, err
+	return &user, result.Error
 }
 
 func (u *User) CheckPasswordHash(password *string) bool {

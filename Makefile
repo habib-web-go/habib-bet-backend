@@ -26,6 +26,7 @@ clean:
 .PHONY: deps
 ## deps: Download modules
 deps:
+	@go mod tidy
 	@go mod download
 	@$(DOCKER_DEVELOPMENT) up -d
 

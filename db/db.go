@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/habib-web-go/habib-bet-backend/config"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 import "gorm.io/driver/postgres"
@@ -34,10 +34,10 @@ func GetDB() *gorm.DB {
 }
 
 func IsDuplicateKeyError(err error) bool {
-	pgErr, ok := err.(*pq.Error)
+	pgErr, ok := err.(*pgconn.PgError)
 	if ok {
-		return pgErr.Code.Name() == "unique_violation"
-
+		// 23505 code for unique_violation
+		return pgErr.Code == "23505"
 	}
 	return false
 }
