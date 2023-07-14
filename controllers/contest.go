@@ -96,16 +96,20 @@ func (cc *contestController) ongoing(c *gin.Context) {
 	db := _db.GetDB()
 	now := time.Now()
 	var userContests []models.UserContest
-	var contests []models.Contest
 	user := middlewares.GetUser(c)
 	r := db.Model(&models.UserContest{UserID: user.ID}).Joins("Contest").Where(
 		"\"start\" <= ? AND ?  <= \"end\"", now, now,
-	).Order("start, \"end\"").Select("user_contests.*, \"Contest\".*").Find(&userContests).Find(&contests)
+	).Order("start, \"end\"").Find(&userContests)
 	if r.Error != nil {
 		panic(r.Error)
 	}
 	contestResponses := make([]*forms.Contest, len(userContests))
 	for i, userContest := range userContests {
+		contest, err := models.GetContestById(userContest.ContestID)
+		if err != nil {
+			panic(err)
+		}
+		userContest.Contest = contest
 		publicContest, err := createPublicContest(userContest.Contest, &userContest)
 		if err != nil {
 			panic(err)
@@ -136,10 +140,11 @@ func (cc *contestController) archive(c *gin.Context) {
 	}
 	contestResponses := make([]*forms.Contest, len(userContests))
 	for i, userContest := range userContests {
-		var contest = &models.Contest{}
-		db.Find(contest, userContest.ContestID)
-		userContest.Contest = contest
-		publicContest, err := createPublicContest(contest, &userContest)
+		userContest.Contest, err = models.GetContestById(userContest.ContestID)
+		if err != nil {
+			panic(err)
+		}
+		publicContest, err := createPublicContest(userContest.Contest, &userContest)
 		if err != nil {
 			panic(err)
 		}
@@ -151,10 +156,41 @@ func (cc *contestController) archive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": contestResponses, "metadata": metadata})
 }
 
+func (cc *contestController) contest(c *gin.Context) {
+	db := _db.GetDB()
+	user := middlewares.GetUser(c)
+	contestId, err := strconv.Atoi(c.Param("contestId"))
+	if err != nil {
+		handleBadRequest(c, err)
+		return
+	}
+	contest, err := models.GetContestById(uint(contestId))
+	if err != nil {
+		panic(err)
+	}
+	if contest == nil {
+		handleError(c, nil, "contest not found", http.StatusNotFound)
+		return
+	}
+	var userContest = &models.UserContest{ContestID: contest.ID, UserID: user.ID}
+	db.Where(userContest).Find(userContest)
+	userContest.Contest = contest
+	publicContest, err := createPublicContest(contest, userContest)
+	if err != nil {
+		panic(err)
+	}
+	contestResponse := &forms.Contest{
+		PublicContest: *publicContest,
+		Registered:    true,
+	}
+	c.JSON(http.StatusOK, contestResponse)
+}
+
 func InitContestController(router *gin.RouterGroup) {
 	cc := contestController{}
 	router.Use(middlewares.AuthMiddleware)
 	router.POST(":contestId/register", cc.register)
+	router.GET(":contestId", cc.contest)
 	router.GET("coming", cc.coming)
 	router.GET("ongoing", cc.ongoing)
 	router.GET("archive", cc.archive)
