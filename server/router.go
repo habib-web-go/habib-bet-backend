@@ -28,4 +28,6 @@ func initV1Router(router *gin.RouterGroup) {
 	)
 	controllers.InitHealthController(router)
 	controllers.InitUserController(router.Group("user"))
+	controllers.InitPublicContestController(router.Group("public"))
+	controllers.InitContestController(router.Group("contest"))
 }

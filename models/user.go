@@ -10,7 +10,7 @@ type User struct {
 	gorm.Model
 	Username       string `gorm:"unique;index"`
 	HashedPassword string `gorm:"notNull"`
-	Coins          uint   `gorm:"default:0"`
+	Coins          uint   `gorm:"default:0;check:coins >= 0"`
 }
 
 func CreateUser(username, password *string) (*User, error) {

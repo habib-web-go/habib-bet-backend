@@ -11,11 +11,11 @@ import (
 	"net/http"
 )
 
-type UserController struct {
+type userController struct {
 	userKey string
 }
 
-func (u *UserController) signup(c *gin.Context) {
+func (u *userController) signup(c *gin.Context) {
 	var requestBody forms.UserRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
@@ -32,7 +32,7 @@ func (u *UserController) signup(c *gin.Context) {
 	u.addUserToSession(c, user)
 }
 
-func (u *UserController) login(c *gin.Context) {
+func (u *userController) login(c *gin.Context) {
 	var requestBody forms.UserRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
@@ -53,7 +53,7 @@ func (u *UserController) login(c *gin.Context) {
 	u.addUserToSession(c, user)
 }
 
-func (u *UserController) logout(c *gin.Context) {
+func (u *userController) logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
 	if err := session.Save(); err != nil {
@@ -62,22 +62,22 @@ func (u *UserController) logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func (u *UserController) addUserToSession(c *gin.Context, user *models.User) {
+func (u *userController) addUserToSession(c *gin.Context, user *models.User) {
 	session := sessions.Default(c)
 	session.Clear()
 	session.Set(u.userKey, user.ID)
 	if err := session.Save(); err != nil {
 		panic(err)
 	}
-	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
+	c.JSON(http.StatusOK, createUserResponse(user))
 }
 
-func (u *UserController) me(c *gin.Context) {
+func (u *userController) me(c *gin.Context) {
 	user := middlewares.GetUser(c)
-	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
+	c.JSON(http.StatusOK, createUserResponse(user))
 }
 
-func (u *UserController) increaseCoin(c *gin.Context) {
+func (u *userController) increaseCoin(c *gin.Context) {
 	var requestBody forms.IncreaseCoinsRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		handleBadRequest(c, err)
@@ -88,12 +88,20 @@ func (u *UserController) increaseCoin(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	c.JSON(http.StatusOK, forms.CreateUserResponse(user))
+	c.JSON(http.StatusOK, createUserResponse(user))
+}
+
+func createUserResponse(u *models.User) *forms.UserResponse {
+	return &forms.UserResponse{
+		Id:       u.ID,
+		Username: u.Username,
+		Coins:    u.Coins,
+	}
 }
 
 func InitUserController(router *gin.RouterGroup) {
 	conf := config.GetConfig()
-	u := UserController{userKey: conf.GetString("session.userKey")}
+	u := userController{userKey: conf.GetString("session.userKey")}
 	router.POST("signup", u.signup)
 	router.POST("login", u.login)
 	router.POST("logout", u.logout)

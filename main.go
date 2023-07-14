@@ -13,7 +13,7 @@ func main() {
 	command := flag.String(
 		"command",
 		"run_server",
-		"command to execute. possible values: run_server,migration",
+		"command to execute. possible values: run_server,migration,create_contest",
 	)
 	flag.Parse()
 	err := config.Init(*profile)
@@ -32,6 +32,12 @@ func main() {
 	}
 	if *command == "migrate" {
 		err = models.AutoMigrate()
+		if err != nil {
+			panic(err)
+		}
+	}
+	if *command == "create_contest" {
+		err = models.CreateContest()
 		if err != nil {
 			panic(err)
 		}

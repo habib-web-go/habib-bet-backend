@@ -5,13 +5,13 @@ import (
 	"net/http"
 )
 
-type HealthController struct{}
+type healthController struct{}
 
-func (h HealthController) status(c *gin.Context) {
+func (h healthController) status(c *gin.Context) {
 	c.JSONP(http.StatusOK, gin.H{"status": "ok"})
 }
 
 func InitHealthController(router *gin.RouterGroup) {
-	h := HealthController{}
+	h := healthController{}
 	router.GET("health", h.status)
 }
