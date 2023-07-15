@@ -67,7 +67,7 @@ func createPublicContest(contest *models.Contest, userContest *models.UserContes
 	}
 	now := time.Now()
 	var questionStates []forms.QuestionState
-
+	x := 0
 	if contest.Start.Before(now) {
 		questionStates = make([]forms.QuestionState, len(*questions))
 		input := userCount
@@ -129,15 +129,11 @@ func createPublicContest(contest *models.Contest, userContest *models.UserContes
 				}
 				questionStates[i] = questionState
 			} else {
-				questionStates[i] = forms.QuestionState{
-					ID:    q.ID,
-					Start: start,
-					End:   end,
-					Order: q.Order,
-				}
+				x++
 			}
 		}
 	}
+	questionStates = questionStates[0 : len(*questions)-x]
 	return &forms.PublicContest{
 		ID:            contest.ID,
 		Name:          contest.Name,
