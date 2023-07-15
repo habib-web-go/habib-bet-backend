@@ -28,4 +28,5 @@ type QuestionState struct {
 type Contest struct {
 	PublicContest
 	Registered bool `json:"registered"`
+	RewardPaid bool `json:"reward_paid"`
 }

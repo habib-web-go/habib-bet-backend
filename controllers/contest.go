@@ -6,6 +6,7 @@ import (
 	"github.com/habib-web-go/habib-bet-backend/forms"
 	"github.com/habib-web-go/habib-bet-backend/middlewares"
 	"github.com/habib-web-go/habib-bet-backend/models"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
@@ -87,6 +88,7 @@ func (cc *contestController) coming(c *gin.Context) {
 		contestResponses[i] = &forms.Contest{
 			PublicContest: *publicContest,
 			Registered:    contest.Registered,
+			RewardPaid:    false,
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"data": contestResponses, "metadata": metadata})
@@ -117,6 +119,7 @@ func (cc *contestController) ongoing(c *gin.Context) {
 		contestResponses[i] = &forms.Contest{
 			PublicContest: *publicContest,
 			Registered:    true,
+			RewardPaid:    false,
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"data": contestResponses})
@@ -151,6 +154,7 @@ func (cc *contestController) archive(c *gin.Context) {
 		contestResponses[i] = &forms.Contest{
 			PublicContest: *publicContest,
 			Registered:    true,
+			RewardPaid:    userContest.Claimed,
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"data": contestResponses, "metadata": metadata})
@@ -174,6 +178,10 @@ func (cc *contestController) contest(c *gin.Context) {
 	}
 	var userContest = &models.UserContest{ContestID: contest.ID, UserID: user.ID}
 	db.Where(userContest).Find(userContest)
+	if userContest.ID == 0 {
+		handleBadRequestWithMessage(c, nil, "you are not part of this contest")
+		return
+	}
 	userContest.Contest = contest
 	publicContest, err := createPublicContest(contest, userContest)
 	if err != nil {
@@ -182,14 +190,95 @@ func (cc *contestController) contest(c *gin.Context) {
 	contestResponse := &forms.Contest{
 		PublicContest: *publicContest,
 		Registered:    true,
+		RewardPaid:    userContest.Claimed,
 	}
 	c.JSON(http.StatusOK, contestResponse)
+}
+
+func (cc *contestController) reward(c *gin.Context) {
+	db := _db.GetDB()
+	user := middlewares.GetUser(c)
+	contestId, err := strconv.Atoi(c.Param("contestId"))
+	if err != nil {
+		handleBadRequest(c, err)
+		return
+	}
+	now := time.Now()
+	contest, err := models.GetContestById(uint(contestId))
+	if err != nil {
+		panic(err)
+	}
+	if contest == nil {
+		handleError(c, nil, "contest not found", http.StatusNotFound)
+		return
+	}
+	if now.Before(contest.End) {
+		handleBadRequestWithMessage(c, nil, "contest not ended")
+		return
+	}
+	var userContest = &models.UserContest{ContestID: contest.ID, UserID: user.ID}
+	db.Where(userContest).Find(userContest)
+	if userContest.ID == 0 {
+		handleBadRequestWithMessage(c, nil, "you are not part of this contest")
+		return
+	}
+	userContest.Contest = contest
+	if userContest.Claimed {
+		handleBadRequestWithMessage(c, nil, "reward already paid")
+		return
+	}
+	questions, err := contest.Questions()
+	if err != nil {
+		panic(err)
+	}
+	lastQuestion := (*questions)[len(*questions)-1]
+	userAnswer := &models.UserAnswer{UserContestID: userContest.ID, QuestionID: lastQuestion.ID}
+	err = db.Where(userAnswer).Find(userAnswer).Error
+	if err != nil {
+		panic(err)
+	}
+	var answer string
+	if lastQuestion.Answer {
+		answer = "A"
+	} else {
+		answer = "B"
+	}
+	if userAnswer.Answer != answer {
+		handleBadRequestWithMessage(c, nil, "you are not win this contest")
+		return
+	}
+	userCount, err := contest.UserCount()
+	if err != nil {
+		panic(err)
+	}
+	winnersCount, err := lastQuestion.TrueAnswerCount()
+	if err != nil {
+		panic(err)
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		userContest.Claimed = true
+		if err := tx.Save(userContest).Error; err != nil {
+			return err
+		}
+		amount := int64(contest.EntryFee) * userCount / winnersCount
+		result := db.Model(user).Update("coins", gorm.Expr("coins + ?", amount))
+		if result.Error != nil {
+			return err
+		}
+		user.Coins += uint(amount)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(http.StatusOK, createUserResponse(user))
 }
 
 func InitContestController(router *gin.RouterGroup) {
 	cc := contestController{}
 	router.Use(middlewares.AuthMiddleware)
 	router.POST(":contestId/register", cc.register)
+	router.POST(":contestId/reward", cc.reward)
 	router.GET(":contestId", cc.contest)
 	router.GET("coming", cc.coming)
 	router.GET("ongoing", cc.ongoing)

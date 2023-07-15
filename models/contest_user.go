@@ -12,6 +12,7 @@ type UserContest struct {
 	ContestID uint `gorm:"uniqueIndex:idx_user_contest"`
 	Contest   *Contest
 	answers   *[]UserAnswer
+	Claimed   bool
 }
 
 func (uc *UserContest) Answers() (*[]UserAnswer, error) {

@@ -30,4 +30,5 @@ func initV1Router(router *gin.RouterGroup) {
 	controllers.InitUserController(router.Group("user"))
 	controllers.InitPublicContestController(router.Group("public"))
 	controllers.InitContestController(router.Group("contest"))
+	controllers.InitQuestionController(router.Group("question"))
 }

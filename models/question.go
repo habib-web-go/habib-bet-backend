@@ -40,3 +40,16 @@ func (q *Question) TrueAnswerCount() (int64, error) {
 	}
 	return count, nil
 }
+
+func GetQuestionById(id uint) (*Question, error) {
+	db := _db.GetDB()
+	question := Question{}
+	result := db.Find(&question, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if question.ID == 0 {
+		return nil, nil
+	}
+	return &question, nil
+}
