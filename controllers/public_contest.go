@@ -132,8 +132,8 @@ func createPublicContest(contest *models.Contest, userContest *models.UserContes
 				x++
 			}
 		}
+		questionStates = questionStates[0 : len(*questions)-x]
 	}
-	questionStates = questionStates[0 : len(*questions)-x]
 	return &forms.PublicContest{
 		ID:            contest.ID,
 		Name:          contest.Name,
