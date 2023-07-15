@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:14.1-bullseye
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  migrate:
+    image: habib-bet/backend:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [ "--profile", "production", "--command","migrate" ]
+
+  server:
+    image: habib-bet/backend:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db:
+    driver: local
