@@ -4,6 +4,7 @@ import (
 	_db "github.com/habib-web-go/habib-bet-backend/db"
 	"gorm.io/gorm"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -20,7 +21,7 @@ func CreateContest() error {
 	db := _db.GetDB()
 	err := db.Transaction(func(tx *gorm.DB) error {
 		contest := &Contest{
-			Name:     "c" + string(rune(rand.Int())),
+			Name:     "c " + strconv.Itoa(rand.Int()),
 			Start:    time.Now().Add(time.Minute * 1),
 			End:      time.Now().Add(time.Minute * 6),
 			EntryFee: 10,
