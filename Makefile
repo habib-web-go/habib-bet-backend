@@ -24,9 +24,9 @@ run-dev: build
 run-prod: build-docker
 	@$(DOCKER_PRODUCTION) up -d
 
-.PHONY: create-contest-prd
-## create-contest-prd: Build and Run create contest command in docker container.
-create-contest-prd: build-docker
+.PHONY: create-contest-prod
+## create-contest-prod: Build and Run create contest command in docker container.
+create-contest-prod: build-docker
 	@$(DOCKER_PRODUCTION) run migrate --profile production --command create_contest
 
 
