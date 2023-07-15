@@ -3,6 +3,7 @@ package models
 import (
 	_db "github.com/habib-web-go/habib-bet-backend/db"
 	"gorm.io/gorm"
+	"math/rand"
 	"time"
 )
 
@@ -19,9 +20,9 @@ func CreateContest() error {
 	db := _db.GetDB()
 	err := db.Transaction(func(tx *gorm.DB) error {
 		contest := &Contest{
-			Name:     "c1",
-			Start:    time.Now().Add(time.Second * 30),
-			End:      time.Now().Add(time.Minute * 2),
+			Name:     "c" + string(rune(rand.Int())),
+			Start:    time.Now().Add(time.Minute * 1),
+			End:      time.Now().Add(time.Minute * 6),
 			EntryFee: 10,
 		}
 		if err := db.Create(contest).Error; err != nil {
@@ -31,8 +32,8 @@ func CreateContest() error {
 			question := Question{
 				OptionA: "option A :)))",
 				OptionB: "option B :)))",
-				Answer:  true,
-				//Answer:  rand.Intn(2) == 0,
+				//Answer:  true,
+				Answer:  rand.Intn(2) == 0,
 				Order:   uint(i),
 				Contest: contest,
 			}
